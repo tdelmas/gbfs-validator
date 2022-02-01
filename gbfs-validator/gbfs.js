@@ -87,6 +87,22 @@ function hadVehiclesId({ body }) {
   }
 }
 
+function hasStationId({ body }) {
+  if (Array.isArray(body)) {
+    return body.some(lang => lang.body.data.bikes.find(b => b.station_id))
+  } else {
+    return body.data.bikes.some(b => b.station_id)
+  }
+}
+
+function hasPricingPlanId({ body }) {
+  if (Array.isArray(body)) {
+    return body.some(lang => lang.body.data.bikes.find(b => b.pricing_plan_id))
+  } else {
+    return body.data.bikes.some(b => b.pricing_plan_id)
+  }
+}
+
 function hasRentalUris({ body }, key, store) {
   if (Array.isArray(body)) {
     return body.some(lang =>
@@ -401,7 +417,9 @@ class GBFS {
     let vehicleTypes,
       freeBikeStatusHasVehicleId,
       hasIosRentalUris,
-      hasAndroidRentalUris
+      hasAndroidRentalUris,
+      hasBikesStationId,
+      hasBikesPricingPlanId
 
     const result = [gbfsResult]
 
@@ -417,6 +435,8 @@ class GBFS {
         'bikes',
         'android'
       )
+      hasBikesStationId = hasStationId(freeBikeStatusFile)
+      hasBikesPricingPlanId = hasPricingPlanId(freeBikeStatusFile)
     }
 
     if (fileExist(stationInformationFile)) {
@@ -441,14 +461,20 @@ class GBFS {
               })
             )
           } else {
+            // FIXME : useless ? because vehicle_types.json is required in that case.
             addSchema.push(
               getPartialSchema(gbfsVersion, 'no_required_vehicle_type_id')
             )
           }
           break
         case 'vehicle_types':
-          if (freeBikeStatusHasVehicleId) {
-            required = true
+          if (freeBikeStatusHasVehicleId || hasBikesStationId) {
+            required = true // TODO: explain why
+          }
+          break
+        case 'system_pricing_plans':
+          if (hasBikesPricingPlanId) {
+            required = true // TODO: explain why
           }
           break
         case 'system_information':
