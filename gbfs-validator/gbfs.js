@@ -376,8 +376,9 @@ class GBFS {
       }
     }
 
-    let files = require(`./versions/v${this.options.version ||
-      gbfsResult.version}.js`).files(this.options)
+    const gbfsVersion = this.options.version || gbfsResult.version
+
+    let files = require(`./versions/v${gbfsVersion}.js`).files(this.options)
 
     const t = await Promise.all(
       files.map(f => this.getFile(f.file, f.required))
@@ -401,25 +402,15 @@ class GBFS {
       switch (f.type) {
         case 'free_bike_status':
           result.push(
-            this.validationFile(
-              f.body,
-              this.options.version || gbfsResult.version,
-              f.type,
-              f.required,
-              {
-                addSchema:
-                  vehicleTypes && vehicleTypes.length
-                    ? getPartialSchema(
-                        this.options.version || gbfsResult.version,
-                        'required_vehicle_type_id',
-                        { vehicleTypes }
-                      )
-                    : getPartialSchema(
-                        this.options.version || gbfsResult.version,
-                        'no_required_vehicle_type_id'
-                      )
-              }
-            )
+            this.validationFile(f.body, gbfsVersion, f.type, f.required, {
+              addSchema: [
+                vehicleTypes && vehicleTypes.length
+                  ? getPartialSchema(gbfsVersion, 'required_vehicle_type_id', {
+                      vehicleTypes
+                    })
+                  : getPartialSchema(gbfsVersion, 'no_required_vehicle_type_id')
+              ]
+            })
           )
           break
 
@@ -427,7 +418,7 @@ class GBFS {
           result.push(
             this.validationFile(
               f.body,
-              this.options.version || gbfsResult.version,
+              gbfsVersion,
               f.type,
               freeBikeStatusHasVehicleId || f.required
             )
@@ -436,12 +427,7 @@ class GBFS {
 
         default:
           result.push(
-            this.validationFile(
-              f.body,
-              this.options.version || gbfsResult.version,
-              f.type,
-              f.required
-            )
+            this.validationFile(f.body, gbfsVersion, f.type, f.required)
           )
           break
       }
