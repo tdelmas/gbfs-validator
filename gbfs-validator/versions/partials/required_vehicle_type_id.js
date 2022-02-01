@@ -28,15 +28,7 @@ module.exports = ({ vehicleTypes }) => {
                   if: {
                     properties: {
                       vehicle_type_id: {
-                        enum: vehicleTypes
-                          .filter(vt =>
-                            [
-                              'electric_assist',
-                              'electric',
-                              'combustion'
-                            ].includes(vt.propulsion_type)
-                          )
-                          .map(vt => vt.vehicle_type_id)
+                        enum: motorVehicleTypes.map(vt => vt.vehicle_type_id)
                       }
                     },
                     // "required" so it only trigger "then" when "vehicle_type_id" is present.
