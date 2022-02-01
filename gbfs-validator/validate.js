@@ -1,17 +1,33 @@
 const Ajv = require('ajv')
 const addFormats = require('ajv-formats')
-const mergePatch = require('ajv-merge-patch')
+const ajvErrors = require('ajv-errors')
+const jsonpatch = require('fast-json-patch')
+const jsonmerge = require('json-merge-patch')
 
 module.exports = function validate(schema, object, options = {}) {
   const ajv = new Ajv({ allErrors: true, strict: false })
+  ajvErrors(ajv)
   addFormats(ajv)
-  mergePatch(ajv)
 
-  let validate = options.addSchema
-    ? ajv.addSchema(schema).compile(options.addSchema)
-    : ajv.compile(schema)
+  let document = JSON.parse(JSON.stringify(schema))
+
+  options.addSchema?.map(add => {
+    if (add.$patch) {
+      document = jsonpatch.applyPatch(document, add.$patch.with).newDocument
+    }
+
+    if (add.$merge) {
+      document = jsonmerge.apply(document, add.$merge.with)
+    }
+  })
+
+  let validate = ajv.compile(document)
 
   const valid = validate(object)
-  // console.log(object, valid, validate.errors)
-  return valid ? false : validate.errors
+
+  return valid
+    ? false
+    : validate.errors.filter(
+        e => !['$patch', '$merge', 'if'].includes(e.keyword)
+      )
 }

@@ -1,34 +1,50 @@
-module.exports = ({ vehicleTypes }) => ({
-  $id: 'required_vehicle_type_id.json#',
-  $merge: {
-    source: {
-      $ref:
-        'https://github.com/NABSA/gbfs/blob/master/gbfs.md#free_bike_statusjson'
-    },
-    with: {
-      properties: {
-        data: {
-          properties: {
-            bikes: {
-              items: {
-                if: {
-                  properties: {
-                    vehicle_type_id: {
-                      enum: vehicleTypes
-                        .filter(vt =>
-                          [
-                            'electric_assist',
-                            'electric',
-                            'combustion'
-                          ].includes(vt.propulsion_type)
-                        )
-                        .map(vt => vt.vehicle_type_id)
+module.exports = ({ vehicleTypes }) => {
+  const res = {
+    $id: 'required_vehicle_type_id.json#'
+  }
+
+  const motorVehicleTypes = vehicleTypes.filter(vt =>
+    ['electric_assist', 'electric', 'combustion'].includes(vt.propulsion_type)
+  )
+
+  if (motorVehicleTypes.length) {
+    res.$merge = {
+      source: {
+        $ref:
+          'https://github.com/NABSA/gbfs/blob/master/gbfs.md#free_bike_statusjson'
+      },
+      with: {
+        properties: {
+          data: {
+            properties: {
+              bikes: {
+                items: {
+                  errorMessage: {
+                    required: {
+                      vehicle_type_id:
+                        "'vehicle_type_id' is required for this vehicle type"
                     }
                   },
-                  required: ['vehicle_type_id']
-                },
-                then: {
-                  required: ['current_range_meters']
+                  if: {
+                    properties: {
+                      vehicle_type_id: {
+                        enum: vehicleTypes
+                          .filter(vt =>
+                            [
+                              'electric_assist',
+                              'electric',
+                              'combustion'
+                            ].includes(vt.propulsion_type)
+                          )
+                          .map(vt => vt.vehicle_type_id)
+                      }
+                    },
+                    // "required" so it only trigger "then" when "vehicle_type_id" is present.
+                    required: ['vehicle_type_id']
+                  },
+                  then: {
+                    required: ['current_range_meters']
+                  }
                 }
               }
             }
@@ -36,8 +52,9 @@ module.exports = ({ vehicleTypes }) => ({
         }
       }
     }
-  },
-  $patch: {
+  }
+
+  res.$patch = {
     source: {
       $ref:
         'https://github.com/NABSA/gbfs/blob/master/gbfs.md#free_bike_statusjson'
@@ -50,4 +67,6 @@ module.exports = ({ vehicleTypes }) => ({
       }
     ]
   }
-})
+
+  return res
+}
