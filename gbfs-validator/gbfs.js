@@ -81,13 +81,9 @@ function getVehicleTypes({ body }) {
 
 function hadVehiclesId({ body }) {
   if (Array.isArray(body)) {
-    body.forEach(lang => {
-      if (lang.body.data.bikes.find(b => b.vehicle_type_id)) {
-        return true
-      }
-    })
+    return body.some(lang => lang.body.data.bikes.find(b => b.vehicle_type_id))
   } else {
-    return !!body.data.bikes.find(b => b.vehicle_type_id)
+    return body.data.bikes.some(b => b.vehicle_type_id)
   }
 }
 
@@ -95,11 +91,7 @@ function fileExist(file) {
   if (file.exists) {
     return true
   } else if (Array.isArray(file.body)) {
-    file.body.forEach(lang => {
-      if (lang.exists) {
-        return true
-      }
-    })
+    return file.body.some(lang => lang.exists)
   }
 
   return false
