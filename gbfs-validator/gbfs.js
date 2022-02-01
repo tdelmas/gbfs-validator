@@ -87,6 +87,16 @@ function hadVehiclesId({ body }) {
   }
 }
 
+function hasRentalUris({ body }, key, store) {
+  if (Array.isArray(body)) {
+    return body.some(lang =>
+      lang.body.data[key].find(b => b.rental_uris?.[store])
+    )
+  } else {
+    return body.data[key].some(b => b.rental_uris?.[store])
+  }
+}
+
 function fileExist(file) {
   if (file.exists) {
     return true
@@ -386,7 +396,12 @@ class GBFS {
 
     const vehicleTypesFile = t.find(a => a.type === 'vehicle_types')
     const freeBikeStatusFile = t.find(a => a.type === 'free_bike_status')
-    let vehicleTypes, freeBikeStatusHasVehicleId
+    const stationInformationFile = t.find(a => a.type === 'station_information')
+
+    let vehicleTypes,
+      freeBikeStatusHasVehicleId,
+      hasIosRentalUris,
+      hasAndroidRentalUris
 
     const result = [gbfsResult]
 
@@ -396,41 +411,64 @@ class GBFS {
 
     if (fileExist(freeBikeStatusFile)) {
       freeBikeStatusHasVehicleId = hadVehiclesId(freeBikeStatusFile)
+      hasIosRentalUris = hasRentalUris(freeBikeStatusFile, 'bikes', 'ios')
+      hasAndroidRentalUris = hasRentalUris(
+        freeBikeStatusFile,
+        'bikes',
+        'android'
+      )
+    }
+
+    if (fileExist(stationInformationFile)) {
+      hasIosRentalUris =
+        hasIosRentalUris ||
+        hasRentalUris(stationInformationFile, 'stations', 'ios')
+      hasAndroidRentalUris =
+        hasAndroidRentalUris ||
+        hasRentalUris(stationInformationFile, 'stations', 'android')
     }
 
     t.forEach(f => {
+      const addSchema = []
+      let required = f.required
+
       switch (f.type) {
         case 'free_bike_status':
-          result.push(
-            this.validationFile(f.body, gbfsVersion, f.type, f.required, {
-              addSchema: [
-                vehicleTypes && vehicleTypes.length
-                  ? getPartialSchema(gbfsVersion, 'required_vehicle_type_id', {
-                      vehicleTypes
-                    })
-                  : getPartialSchema(gbfsVersion, 'no_required_vehicle_type_id')
-              ]
-            })
-          )
-          break
-
-        case 'vehicle_types':
-          result.push(
-            this.validationFile(
-              f.body,
-              gbfsVersion,
-              f.type,
-              freeBikeStatusHasVehicleId || f.required
+          if (vehicleTypes && vehicleTypes.length) {
+            addSchema.push(
+              getPartialSchema(gbfsVersion, 'required_vehicle_type_id', {
+                vehicleTypes
+              })
             )
-          )
+          } else {
+            addSchema.push(
+              getPartialSchema(gbfsVersion, 'no_required_vehicle_type_id')
+            )
+          }
           break
-
+        case 'vehicle_types':
+          if (freeBikeStatusHasVehicleId) {
+            required = true
+          }
+          break
+        case 'system_information':
+          if (hasAndroidRentalUris || hasIosRentalUris) {
+            addSchema.push(
+              getPartialSchema(gbfsVersion, 'required_store_uri', {
+                ios: hasIosRentalUris,
+                android: hasAndroidRentalUris
+              })
+            )
+          }
         default:
-          result.push(
-            this.validationFile(f.body, gbfsVersion, f.type, f.required)
-          )
           break
       }
+
+      result.push(
+        this.validationFile(f.body, gbfsVersion, f.type, required, {
+          addSchema
+        })
+      )
     })
 
     const filesResult = result.map(file => ({
