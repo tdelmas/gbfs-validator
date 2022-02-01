@@ -33,9 +33,17 @@ module.exports = function validate(schema, object, options = {}) {
 
   const valid = validate(object)
 
-  return valid
-    ? false
-    : validate.errors.filter(
+  if (valid) {
+    return {
+      schema: document,
+      errors: false
+    }
+  } else {
+    return {
+      schema: document,
+      errors: validate.errors.filter(
         e => !['$patch', '$merge', 'if'].includes(e.keyword)
       )
+    }
+  }
 }

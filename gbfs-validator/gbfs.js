@@ -190,13 +190,14 @@ class GBFS {
         }
 
         this.autoDiscovery = body
-        const errors = this.validateFile(
+        const { errors, schema } = this.validateFile(
           this.options.version || body.version || '1.0',
           'gbfs',
           this.autoDiscovery
         )
 
         return {
+          schema,
           errors,
           url,
           version: body.version,
@@ -235,13 +236,14 @@ class GBFS {
 
         this.autoDiscovery = body
 
-        const errors = this.validateFile(
+        const { errors, schema } = this.validateFile(
           this.options.version || body.version || '1.0',
           'gbfs',
           this.autoDiscovery
         )
 
         return {
+          schema,
           errors,
           url: this.url,
           version: body.version || '1.0',
@@ -354,7 +356,7 @@ class GBFS {
     if (Array.isArray(body)) {
       body = body.filter(b => b.exists || b.required).map(b => ({
         ...b,
-        errors: this.validateFile(version, type, b.body, options)
+        ...this.validateFile(version, type, b.body, options)
       }))
 
       return {
@@ -367,7 +369,8 @@ class GBFS {
     } else {
       return {
         required,
-        errors: this.validateFile(version, type, body, options),
+        ...this.validateFile(version, type, body, options),
+
         exists: !!body,
         file: `${type}.json`,
         url: `${this.url}/${type}.json`
@@ -470,12 +473,6 @@ class GBFS {
               addSchema.push(partial)
             }
           } else {
-            // FIXME : useless ? because vehicle_types.json is required in that case.
-            const partial = getPartialSchema(
-              gbfsVersion,
-              'no_required_vehicle_type_id'
-            )
-
             if (partial) {
               addSchema.push(partial)
             }
@@ -483,12 +480,12 @@ class GBFS {
           break
         case 'vehicle_types':
           if (freeBikeStatusHasVehicleId || hasBikesStationId) {
-            required = true // TODO: explain why
+            required = true
           }
           break
         case 'system_pricing_plans':
           if (hasBikesPricingPlanId) {
-            required = true // TODO: explain why
+            required = true
           }
           break
         case 'system_information':
