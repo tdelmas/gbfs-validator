@@ -420,16 +420,21 @@ describe('validation method', () => {
     }`
     const gbfs = new GBFS(`${url}/gbfs.json`)
 
-    return gbfs.validation().then(result => {
-      expect(result).toMatchObject({
-        summary: expect.objectContaining({
-          version: { detected: '2.2', validated: '2.2' },
-          hasErrors: true,
-          errorsCount: 1
-        }),
-        files: expect.any(Array)
+    expect.assertions(1)
+
+    return gbfs
+      .validation()
+      .then(result => {
+        expect(result).toMatchObject({
+          summary: expect.objectContaining({
+            version: { detected: '2.2', validated: '2.2' },
+            hasErrors: true,
+            errorsCount: 1
+          }),
+          files: expect.any(Array)
+        })
       })
-    })
+      .catch(e => expect(e).toBeUndefined())
   })
 })
 
@@ -454,19 +459,35 @@ describe('conditional vehicle_types file', () => {
     }`
     const gbfs = new GBFS(`${url}/gbfs.json`)
 
-    return gbfs.validation().then(result => {
-      // console.log(
-      //   require('util').inspect(result, { depth: null, colors: true })
-      // )
-      // expect(result).toMatchObject({
-      //   summary: expect.objectContaining({
-      //     version: { detected: '2.2', validated: '2.2' },
-      //     hasErrors: true,
-      //     errorsCount: 1
-      //   }),
-      //   files: expect.any(Array)
-      // })
-    })
+    expect.assertions(1)
+
+    return gbfs
+      .validation()
+      .then(result => {
+        expect(result).toMatchObject({
+          summary: expect.objectContaining({
+            version: { detected: '2.2', validated: '2.2' },
+            hasErrors: true,
+            errorsCount: 1
+          }),
+          files: expect.arrayContaining([
+            expect.objectContaining({
+              file: 'free_bike_status.json',
+              languages: expect.arrayContaining([
+                expect.objectContaining({
+                  errors: expect.arrayContaining([
+                    expect.objectContaining({
+                      instancePath: '/data/bikes/0/vehicle_type_id',
+                      message: "property 'vehicle_type_id' must not be present"
+                    })
+                  ])
+                })
+              ])
+            })
+          ])
+        })
+      })
+      .catch(e => expect(e).toBeUndefined())
   })
 })
 
@@ -491,19 +512,41 @@ describe('conditional required vehicle_type_id', () => {
     }`
     const gbfs = new GBFS(`${url}/gbfs.json`)
 
-    return gbfs.validation().then(result => {
-      // console.log(
-      //   require('util').inspect(result, { depth: null, colors: true })
-      // )
-      // expect(result).toMatchObject({
-      //   summary: expect.objectContaining({
-      //     version: { detected: '2.2', validated: '2.2' },
-      //     hasErrors: true,
-      //     errorsCount: 2
-      //   }),
-      //   files: expect.any(Array)
-      // })
-    })
+    expect.assertions(1)
+
+    return gbfs
+      .validation()
+      .then(result => {
+        expect(result).toMatchObject({
+          summary: expect.objectContaining({
+            version: { detected: '2.2', validated: '2.2' },
+            hasErrors: true,
+            errorsCount: 2
+          }),
+          files: expect.arrayContaining([
+            expect.objectContaining({
+              file: 'free_bike_status.json',
+              languages: expect.arrayContaining([
+                expect.objectContaining({
+                  errors: expect.arrayContaining([
+                    expect.objectContaining({
+                      instancePath: '/data/bikes/0',
+                      message:
+                        "'vehicle_type_id' is required for this vehicle type"
+                    }),
+                    expect.objectContaining({
+                      instancePath: '/data/bikes/2',
+                      message:
+                        "must have required property 'current_range_meters'"
+                    })
+                  ])
+                })
+              ])
+            })
+          ])
+        })
+      })
+      .catch(e => expect(e).toBeUndefined())
   })
 })
 
@@ -528,18 +571,34 @@ describe('conditional no required vehicle_type_id', () => {
     }`
     const gbfs = new GBFS(`${url}/gbfs.json`)
 
-    return gbfs.validation().then(result => {
-      // console.log(
-      //   require('util').inspect(result, { depth: null, colors: true })
-      // )
-      // expect(result).toMatchObject({
-      //   summary: expect.objectContaining({
-      //     version: { detected: '2.2', validated: '2.2' },
-      //     hasErrors: true,
-      //     errorsCount: 1
-      //   }),
-      //   files: expect.any(Array)
-      // })
-    })
+    expect.assertions(1)
+
+    return gbfs
+      .validation()
+      .then(result => {
+        expect(result).toMatchObject({
+          summary: expect.objectContaining({
+            version: { detected: '2.2', validated: '2.2' },
+            hasErrors: true,
+            errorsCount: 1
+          }),
+          files: expect.arrayContaining([
+            expect.objectContaining({
+              file: 'free_bike_status.json',
+              languages: expect.arrayContaining([
+                expect.objectContaining({
+                  errors: expect.arrayContaining([
+                    expect.objectContaining({
+                      instancePath: '/data/bikes/1/vehicle_type_id',
+                      message: "property 'vehicle_type_id' must not be present"
+                    })
+                  ])
+                })
+              ])
+            })
+          ])
+        })
+      })
+      .catch(e => expect(e).toBeUndefined())
   })
 })
