@@ -49,7 +49,7 @@ function getPartialSchema(version, partial, data = {}) {
   try {
     partialSchema = require(`./schema/v${version}/partials/${partial}.js`)(data)
   } catch (error) {
-    throw new Error(`Partial schema '${partial}' not found for 'v${version}'`)
+    return null
   }
 
   return partialSchema
@@ -114,6 +114,10 @@ function hasRentalUris({ body }, key, store) {
 }
 
 function fileExist(file) {
+  if (!file) {
+    return false
+  }
+
   if (file.exists) {
     return true
   } else if (Array.isArray(file.body)) {
@@ -455,16 +459,26 @@ class GBFS {
       switch (f.type) {
         case 'free_bike_status':
           if (vehicleTypes && vehicleTypes.length) {
-            addSchema.push(
-              getPartialSchema(gbfsVersion, 'required_vehicle_type_id', {
+            const partial = getPartialSchema(
+              gbfsVersion,
+              'required_vehicle_type_id',
+              {
                 vehicleTypes
-              })
+              }
             )
+            if (partial) {
+              addSchema.push(partial)
+            }
           } else {
             // FIXME : useless ? because vehicle_types.json is required in that case.
-            addSchema.push(
-              getPartialSchema(gbfsVersion, 'no_required_vehicle_type_id')
+            const partial = getPartialSchema(
+              gbfsVersion,
+              'no_required_vehicle_type_id'
             )
+
+            if (partial) {
+              addSchema.push(partial)
+            }
           }
           break
         case 'vehicle_types':
@@ -479,12 +493,17 @@ class GBFS {
           break
         case 'system_information':
           if (hasAndroidRentalUris || hasIosRentalUris) {
-            addSchema.push(
-              getPartialSchema(gbfsVersion, 'required_store_uri', {
+            const partial = getPartialSchema(
+              gbfsVersion,
+              'required_store_uri',
+              {
                 ios: hasIosRentalUris,
                 android: hasAndroidRentalUris
-              })
+              }
             )
+            if (partial) {
+              addSchema.push(partial)
+            }
           }
         default:
           break
