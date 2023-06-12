@@ -3,10 +3,19 @@ const fastify = require('fastify')
 const version = '3.0-RC'
 const last_updated = 1566224400
 
-function build(opts = {}) {
-  const app = fastify(opts)
+class MockRequests {
+  entry_points() {
+    return {
+      manifest: this.manifest,
+      gbfs: this.gbfs,
+      gbfs_versions: this.gbfs_versions,
+      system_information: this.system_information,
+      vehicle_types: this.vehicle_types,
+      station_status: this.station_status
+    }
+  }
 
-  app.get('/manifest.json', async function(request, reply) {
+  manifest({ basePath }) {
     return {
       last_updated,
       ttl: 0,
@@ -18,16 +27,16 @@ function build(opts = {}) {
             versions: [
               {
                 version: '3.0-RC',
-                url: `http://${request.hostname}/gbfs.json`
+                url: `${basePath}/gbfs.json`
               }
             ]
           }
         ]
       }
     }
-  })
+  }
 
-  app.get('/gbfs.json', async function(request, reply) {
+  gbfs({ basePath }) {
     return {
       last_updated,
       ttl: 0,
@@ -36,30 +45,22 @@ function build(opts = {}) {
         feeds: [
           {
             name: 'system_information',
-            url: `http://${request.hostname}/system_information.json`
+            url: `${basePath}/system_information.json`
           },
           {
             name: 'vehicle_types',
-            url: `http://${request.hostname}/vehicle_types.json`
-          },
-          {
-            name: 'station_information',
-            url: `http://${request.hostname}/station_information.json`
-          },
-          {
-            name: 'station_status',
-            url: `http://${request.hostname}/station_status.json`
+            url: `${basePath}/vehicle_types.json`
           },
           {
             name: 'vehicle_status',
-            url: `http://${request.hostname}/vehicle_status.json`
+            url: `${basePath}/vehicle_status.json`
           }
         ]
       }
     }
-  })
+  }
 
-  app.get('/gbfs_versions.json', async function(request, reply) {
+  gbfs_versions({ basePath }) {
     return {
       last_updated,
       ttl: 0,
@@ -68,14 +69,14 @@ function build(opts = {}) {
         versions: [
           {
             version: '3.0-RC',
-            url: `http://${request.hostname}/gbfs.json`
+            url: `${basePath}/gbfs.json`
           }
         ]
       }
     }
-  })
+  }
 
-  app.get('/system_information.json', async function(request, reply) {
+  system_information() {
     return {
       last_updated,
       ttl: 0,
@@ -94,9 +95,9 @@ function build(opts = {}) {
         feed_contact_email: 'datafeed@example.com'
       }
     }
-  })
+  }
 
-  app.get('/vehicle_types.json', async function(request, reply) {
+  vehicle_types() {
     return {
       last_updated,
       ttl: 0,
@@ -148,9 +149,9 @@ function build(opts = {}) {
         ]
       }
     }
-  })
+  }
 
-  app.get('/vehicle_status.json', async function(request, reply) {
+  vehicle_status() {
     return {
       last_updated,
       ttl: 0,
@@ -179,9 +180,27 @@ function build(opts = {}) {
         ]
       }
     }
-  })
+  }
 
-  return app
+  build() {
+    const app = fastify()
+
+    const data = this.entry_points()
+
+    const keys = Object.keys(data)
+
+    for (const key of keys) {
+      app.get(`/${key}.json`, async function(request) {
+        const basePath = `http://${request.hostname}`
+
+        return data[key]({ request, basePath })
+      })
+    }
+
+    return app
+  }
 }
 
-module.exports = build
+module.exports = {
+  MockRequests
+}
