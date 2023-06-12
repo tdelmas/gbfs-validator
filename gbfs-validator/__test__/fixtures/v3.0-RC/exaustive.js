@@ -11,7 +11,13 @@ class MockRequests {
       gbfs_versions: this.gbfs_versions,
       system_information: this.system_information,
       vehicle_types: this.vehicle_types,
-      station_status: this.station_status
+      vehicle_status: this.vehicle_status,
+      station_status: this.station_status,
+      station_information: this.station_information,
+      system_regions: this.system_regions,
+      system_pricing_plans: this.system_pricing_plans,
+      system_alerts: this.system_alerts,
+      geofencing_zones: this.geofencing_zones
     }
   }
 
@@ -104,7 +110,7 @@ class MockRequests {
     }
   }
 
-  system_information() {
+  system_information({ basePath }) {
     return {
       last_updated,
       ttl: 0,
@@ -210,8 +216,8 @@ class MockRequests {
                 'https://www.example.com/assets/icon_bicycle_dark.svg',
               icon_last_modified: '2021-06-15'
             },
-            default_pricing_plan_id: 'bike_plan_1',
-            pricing_plan_ids: ['bike_plan_1', 'bike_plan_2', 'bike_plan_3']
+            default_pricing_plan_id: 'plan2',
+            pricing_plan_ids: ['plan2', 'plan3']
           },
           {
             vehicle_type_id: 'cartype1',
@@ -266,8 +272,8 @@ class MockRequests {
               icon_url_dark: 'https://www.example.com/assets/icon_car_dark.svg',
               icon_last_modified: '2021-06-15'
             },
-            default_pricing_plan_id: 'car_plan_1',
-            pricing_plan_ids: ['car_plan_1', 'car_plan_2', 'car_plan_3']
+            default_pricing_plan_id: 'plan3',
+            pricing_plan_ids: ['plan3']
           }
         ]
       }
@@ -344,7 +350,6 @@ class MockRequests {
             ],
             is_valet_station: true,
             is_charging_station: true,
-
             rental_uris: {
               android:
                 'https://www.example.com/app?sid=1234567890&platform=android',
@@ -466,7 +471,7 @@ class MockRequests {
             current_fuel_percent: 0.5,
             station_id: 'station1',
             home_station_id: 'station1',
-            pricing_plan_id: 'pricingplan1',
+            pricing_plan_id: 'plan3',
             vehicle_equipment: ['winter_tires'],
             available_until: '2021-05-17T15:00:00Z'
           }

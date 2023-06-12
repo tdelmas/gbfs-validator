@@ -5,12 +5,12 @@ function get_errors(result) {
 
   result.files.map(f => {
     if (f.errors) {
-      errors.push(...f.errors)
+      errors.push({ file: f.file, errors: f.errors })
     }
 
     f.languages?.map(l => {
       if (l.errors) {
-        errors.push(...l.errors)
+        errors.push({ file: f.file, lang: l.lang, errors: l.errors })
       }
     })
   })

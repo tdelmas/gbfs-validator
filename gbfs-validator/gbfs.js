@@ -443,6 +443,18 @@ class GBFS {
     const freeBikeStatusFile = t.find(a => a.type === 'free_bike_status')
     const stationInformationFile = t.find(a => a.type === 'station_information')
     const stationPricingPlans = t.find(a => a.type === 'system_pricing_plans')
+    const systemInformation = t.find(a => a.type === 'system_information')
+
+    const manifestUrl = systemInformation?.body?.[0]?.body?.data?.manifest_url
+
+    if (manifestUrl) {
+      const body = await got.get(manifestUrl, this.gotOptions).json()
+      t.push({
+        body,
+        required: false,
+        type: 'manifest'
+      })
+    }
 
     let vehicleTypes,
       pricingPlans,
