@@ -303,38 +303,44 @@ class GBFS {
 
   getFile(type, required) {
     if (this.autoDiscovery) {
-      const urls = Object.entries(this.autoDiscovery.data).map(key => {
-        return Object.assign(
-          { lang: key[0] },
-          this.autoDiscovery.data[key[0]].feeds.find(f => f.name === type)
-        )
-      })
+      let urls
+
+      if (this.autoDiscovery.version === '3.0-RC') {
+        urls = this.autoDiscovery.data.feeds.filter(f => f.name === type)
+      } else {
+        urls = Object.entries(this.autoDiscovery.data).map(key => {
+          return Object.assign(
+            { lang: key[0] },
+            this.autoDiscovery.data[key[0]].feeds.find(f => f.name === type)
+          )
+        })
+      }
 
       return Promise.all(
         urls.map(
-          lang =>
-            lang && lang.url
+          feed =>
+            feed && feed.url
               ? got
-                  .get(lang.url, this.gotOptions)
+                  .get(feed.url, this.gotOptions)
                   .json()
                   .then(body => {
                     return {
                       body,
                       exists: true,
-                      lang: lang.lang,
-                      url: lang.url
+                      lang: feed.lang,
+                      url: feed.url
                     }
                   })
                   .catch(() => ({
                     body: null,
                     exists: false,
-                    lang: lang.lang,
-                    url: lang.url
+                    lang: feed.lang,
+                    url: feed.url
                   }))
               : {
                   body: null,
                   exists: false,
-                  lang: lang.lang,
+                  lang: feed.lang,
                   url: null
                 }
         )
@@ -495,6 +501,20 @@ class GBFS {
           }
           break
         case 'free_bike_status':
+          if (vehicleTypes && vehicleTypes.length) {
+            const partial = getPartialSchema(
+              gbfsVersion,
+              'required_vehicle_type_id',
+              {
+                vehicleTypes
+              }
+            )
+            if (partial) {
+              addSchema.push(partial)
+            }
+          }
+          break
+        case 'vehicle_status':
           if (vehicleTypes && vehicleTypes.length) {
             const partial = getPartialSchema(
               gbfsVersion,
