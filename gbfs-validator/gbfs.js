@@ -79,22 +79,14 @@ function getVehicleTypes({ body }) {
     return body.reduce((acc, lang) => {
       lang.body?.data?.vehicle_types.map(vt => {
         if (!acc.find(f => f.vehicle_type_id === vt.vehicle_type_id)) {
-          acc.push({
-            vehicle_type_id: vt.vehicle_type_id,
-            form_factor: vt.form_factor,
-            propulsion_type: vt.propulsion_type
-          })
+          acc.push(vt)
         }
       })
 
       return acc
     }, [])
   } else {
-    return body?.data?.vehicle_types.map(vt => ({
-      vehicle_type_id: vt.vehicle_type_id,
-      form_factor: vt.form_factor,
-      propulsion_type: vt.propulsion_type
-    }))
+    return body?.data?.vehicle_types
   }
 }
 
@@ -670,14 +662,28 @@ class GBFS {
           }
 
           if (plansWithReserveTime?.length) {
-            let schema = getAdditionalSchema(
-              gbfsVersion,
-              'vehicle_types/default_reserve_time_required',
-              { plan_ids: plansWithReserveTime }
-            )
+            let vehicle_type_ids = new Set()
 
-            if (additionalSchema) {
-              additionalSchema.push(schema)
+            plansWithReserveTime.map(({ plan_id }) => {
+              vehicleTypes.map(vt => {
+                if (vt.pricing_plan_ids?.includes(plan_id)) {
+                  vehicle_type_ids.add(vt.vehicle_type_id)
+                }
+              })
+            })
+
+            vehicle_type_ids = [...vehicle_type_ids]
+
+            if (vehicle_type_ids.length) {
+              let schema = getAdditionalSchema(
+                gbfsVersion,
+                'vehicle_types/default_reserve_time_required',
+                { vehicle_type_ids }
+              )
+
+              if (schema) {
+                additionalSchema.push(schema)
+              }
             }
           }
 

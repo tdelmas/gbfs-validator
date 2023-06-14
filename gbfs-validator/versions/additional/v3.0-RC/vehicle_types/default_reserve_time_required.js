@@ -1,4 +1,4 @@
-module.exports = ({ plan_ids }) => ({
+module.exports = ({ vehicle_type_ids }) => ({
   $schema: 'http://json-schema.org/draft-07/schema',
   $id: 'default_reserve_time',
   type: 'object',
@@ -11,14 +11,17 @@ module.exports = ({ plan_ids }) => ({
           items: {
             type: 'object',
             properties: {
-              plan_id: {
+              vehicle_type_id: {
                 type: 'string'
               },
               default_reserve_time: {
                 type: 'integer'
               }
             },
-            if: { properties: { plan_id: { enum: plan_ids } } },
+            if: {
+              properties: { vehicle_type_id: { enum: vehicle_type_ids } },
+              required: ['vehicle_type_id']
+            },
             then: { required: ['default_reserve_time'] }
           }
         }
