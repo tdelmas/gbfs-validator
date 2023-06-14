@@ -114,13 +114,20 @@ function getPricingPlans({ body }) {
   }
 }
 
-function testHasReserveTime({ body }) {
+function getPlansWithReserveTime({ body }) {
   let bodies = Array.isArray(body) ? body : [body]
-  return bodies.some(lang =>
-    lang.body.data.plans.some(
-      p => p.reservation_price_per_min || p.reservation_price_flat_rate
+
+  let plans = []
+
+  bodies.map(lang =>
+    plans.push(
+      ...lang?.body?.data?.plans?.filter(
+        p => p.reservation_price_per_min || p.reservation_price_flat_rate
+      )
     )
   )
+
+  return plans
 }
 
 function hadVehicleTypeId({ body }) {
@@ -500,13 +507,25 @@ class GBFS {
     const manifestUrl = systemInformation?.body?.[0]?.body?.data?.manifest_url
 
     if (manifestUrl) {
-      const body = await got.get(manifestUrl, this.gotOptions).json()
-      //FIXME erreur http
-      t.push({
-        body,
-        required: true,
-        type: 'manifest'
-      })
+      try {
+        const body = await got.get(manifestUrl, this.gotOptions).json()
+
+        t.push({
+          body,
+          required: true,
+          type: 'manifest'
+        })
+      } catch (error) {
+        t.push({
+          url: manifestUrl,
+          recommanded: true,
+          required: true,
+          errors: false,
+          exists: false,
+          file: `manifest.json`,
+          hasErrors: false
+        })
+      }
     }
 
     let vehicleTypes,
@@ -515,7 +534,7 @@ class GBFS {
       hasIosRentalUris,
       hasAndroidRentalUris,
       hasBikesPricingPlanId,
-      hasReserveTime
+      plansWithReserveTime
 
     const result = [gbfsResult]
 
@@ -548,7 +567,7 @@ class GBFS {
     }
 
     if (fileExist(systemPricingPlans)) {
-      hasReserveTime = testHasReserveTime(systemPricingPlans)
+      plansWithReserveTime = getPlansWithReserveTime(systemPricingPlans)
     }
 
     t.forEach(f => {
@@ -572,7 +591,10 @@ class GBFS {
           }
 
           {
-            let latencySchema = getPartialSchema(gbfsVersion, 'station_status/data_latency')
+            let latencySchema = getPartialSchema(
+              gbfsVersion,
+              'station_status/data_latency'
+            )
             if (latencySchema) {
               addPartialSchema.push(latencySchema)
             }
@@ -594,7 +616,10 @@ class GBFS {
           }
 
           {
-            let latencySchema = getPartialSchema(gbfsVersion, 'free_bike_status/data_latency')
+            let latencySchema = getPartialSchema(
+              gbfsVersion,
+              'free_bike_status/data_latency'
+            )
             if (latencySchema) {
               addPartialSchema.push(latencySchema)
             }
@@ -631,19 +656,24 @@ class GBFS {
             required = true
           }
           if (pricingPlans && pricingPlans.length) {
-            const partial = getPartialSchema(gbfsVersion, 'vehicle_types/pricing_plan_id', {
-              pricingPlans
-            })
+            const partial = getPartialSchema(
+              gbfsVersion,
+              'vehicle_types/pricing_plan_id',
+              {
+                pricingPlans
+              }
+            )
 
             if (partial) {
               addPartialSchema.push(partial)
             }
           }
 
-          if (hasReserveTime) {
+          if (plansWithReserveTime?.length) {
             let schema = getAdditionalSchema(
               gbfsVersion,
-              'vehicle_types/default_reserve_time_required'
+              'vehicle_types/default_reserve_time_required',
+              { plan_ids: plansWithReserveTime }
             )
 
             if (additionalSchema) {

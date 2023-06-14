@@ -157,7 +157,6 @@ describe('default_reserve_time REQUIRED if reservation_price_per_min or reservat
       vehicle_types(...args) {
         const json = super.vehicle_types(...args)
 
-        //FIXME test vehicle type
         delete json.data.vehicle_types[0].default_reserve_time
 
         return json
@@ -197,7 +196,7 @@ describe('default_reserve_time REQUIRED if reservation_price_per_min or reservat
       let errors = get_errors(result)
 
       expect(errors[0].errors[0].schemaPath).toBe(
-        '#/properties/data/properties/vehicle_types/items/required'
+        '#/properties/data/properties/vehicle_types/items/then/required'
       )
     })
   })
