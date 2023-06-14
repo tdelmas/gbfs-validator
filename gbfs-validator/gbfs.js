@@ -561,7 +561,7 @@ class GBFS {
           if (vehicleTypes && vehicleTypes.length) {
             const partial = getPartialSchema(
               gbfsVersion,
-              'required_vehicle_types_available',
+              'station_status/required_vehicle_types_available',
               {
                 vehicleTypes
               }
@@ -583,7 +583,7 @@ class GBFS {
           if (vehicleTypes && vehicleTypes.length) {
             const partial = getPartialSchema(
               gbfsVersion,
-              'required_vehicle_type_id',
+              'free_bike_status/required_vehicle_type_id',
               {
                 vehicleTypes
               }
@@ -605,7 +605,7 @@ class GBFS {
           if (vehicleTypes && vehicleTypes.length) {
             const partial = getPartialSchema(
               gbfsVersion,
-              'required_vehicle_type_id',
+              'vehicle_status/required_vehicle_type_id',
               {
                 vehicleTypes
               }
@@ -631,7 +631,7 @@ class GBFS {
             required = true
           }
           if (pricingPlans && pricingPlans.length) {
-            const partial = getPartialSchema(gbfsVersion, 'pricing_plan_id', {
+            const partial = getPartialSchema(gbfsVersion, 'vehicle_types/pricing_plan_id', {
               pricingPlans
             })
 
@@ -661,7 +661,7 @@ class GBFS {
           if (hasAndroidRentalUris || hasIosRentalUris) {
             const partial = getPartialSchema(
               gbfsVersion,
-              'required_store_uri',
+              'system_information/required_store_uri',
               {
                 ios: hasIosRentalUris,
                 android: hasAndroidRentalUris
