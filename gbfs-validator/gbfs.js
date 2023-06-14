@@ -60,6 +60,20 @@ function getPartialSchema(version, partial, data = {}) {
   return partialSchema
 }
 
+function getAdditionalSchema(version, name, data = {}) {
+  let partialSchema
+
+  try {
+    partialSchema = require(`./versions/additional/v${version}/${name}.js`)(
+      data
+    )
+  } catch (error) {
+    return null
+  }
+
+  return partialSchema
+}
+
 function getVehicleTypes({ body }) {
   if (Array.isArray(body)) {
     return body.reduce((acc, lang) => {
@@ -98,6 +112,15 @@ function getPricingPlans({ body }) {
   } else {
     return body?.data?.plans
   }
+}
+
+function testHasReserveTime({ body }) {
+  let bodies = Array.isArray(body) ? body : [body]
+  return bodies.some(lang =>
+    lang.body.data.plans.some(
+      p => p.reservation_price_per_min || p.reservation_price_flat_rate
+    )
+  )
 }
 
 function hadVehicleTypeId({ body }) {
@@ -288,17 +311,37 @@ class GBFS {
       })
   }
 
-  validateFile(version, file, data, options) {
-    let schema
+  validateFile(version, file, data, options, { additionalSchema = [] } = {}) {
+    let s
 
     try {
-      schema = require(`./versions/schemas/v${version}/${file}`)
+      s = require(`./versions/schemas/v${version}/${file}`)
     } catch (e) {
       console.log(e)
       throw new Error('can not require')
     }
 
-    return validate(schema, data, options)
+    let { schema, errors } = validate(s, data, options)
+
+    // should be downloadable :
+    // avec parentheses pour partials
+
+    additionalSchema.map(s => {
+      const { errors: errs } = validate(s, data, {})
+
+      if (errs) {
+        if (!errors) {
+          errors = []
+        }
+
+        errors.push(...errs)
+      }
+    })
+
+    return {
+      schema,
+      errors
+    }
   }
 
   getFile(type, required) {
@@ -306,7 +349,7 @@ class GBFS {
       let urls
 
       if (this.autoDiscovery.version === '3.0-RC') {
-        urls = this.autoDiscovery.data.feeds.filter(f => f.name === type)
+        urls = this.autoDiscovery.data.feeds?.filter(f => f.name === type) || []
       } else {
         urls = Object.entries(this.autoDiscovery.data).map(key => {
           return Object.assign(
@@ -371,11 +414,20 @@ class GBFS {
     }
   }
 
-  validationFile(body, version, type, required, options) {
+  validationFile(
+    body,
+    version,
+    type,
+    required,
+    options,
+    { additionalSchema } = {}
+  ) {
     if (Array.isArray(body)) {
       body = body.filter(b => b.exists || b.required).map(b => ({
         ...b,
-        ...this.validateFile(version, type, b.body, options)
+        ...this.validateFile(version, type, b.body, options, {
+          additionalSchema
+        })
       }))
 
       return {
@@ -442,16 +494,17 @@ class GBFS {
     const vehicleTypesFile = t.find(a => a.type === 'vehicle_types')
     const freeBikeStatusFile = t.find(a => a.type === 'free_bike_status')
     const stationInformationFile = t.find(a => a.type === 'station_information')
-    const stationPricingPlans = t.find(a => a.type === 'system_pricing_plans')
+    const systemPricingPlans = t.find(a => a.type === 'system_pricing_plans')
     const systemInformation = t.find(a => a.type === 'system_information')
 
     const manifestUrl = systemInformation?.body?.[0]?.body?.data?.manifest_url
 
     if (manifestUrl) {
       const body = await got.get(manifestUrl, this.gotOptions).json()
+      //FIXME erreur http
       t.push({
         body,
-        required: false,
+        required: true,
         type: 'manifest'
       })
     }
@@ -461,7 +514,8 @@ class GBFS {
       freeBikeStatusHasVehicleTypeId,
       hasIosRentalUris,
       hasAndroidRentalUris,
-      hasBikesPricingPlanId
+      hasBikesPricingPlanId,
+      hasReserveTime
 
     const result = [gbfsResult]
 
@@ -489,12 +543,17 @@ class GBFS {
         hasRentalUris(stationInformationFile, 'stations', 'android')
     }
 
-    if (fileExist(stationPricingPlans)) {
-      pricingPlans = getPricingPlans(stationPricingPlans)
+    if (fileExist(systemPricingPlans)) {
+      pricingPlans = getPricingPlans(systemPricingPlans)
+    }
+
+    if (fileExist(systemPricingPlans)) {
+      hasReserveTime = testHasReserveTime(systemPricingPlans)
     }
 
     t.forEach(f => {
-      const addSchema = []
+      const additionalSchema = []
+      const addPartialSchema = []
       let required = f.required
 
       switch (f.type) {
@@ -508,9 +567,17 @@ class GBFS {
               }
             )
             if (partial) {
-              addSchema.push(partial)
+              addPartialSchema.push(partial)
             }
           }
+
+          {
+            let latencySchema = getPartialSchema(gbfsVersion, 'station_status/data_latency')
+            if (latencySchema) {
+              addPartialSchema.push(latencySchema)
+            }
+          }
+
           break
         case 'free_bike_status':
           if (vehicleTypes && vehicleTypes.length) {
@@ -522,9 +589,17 @@ class GBFS {
               }
             )
             if (partial) {
-              addSchema.push(partial)
+              addPartialSchema.push(partial)
             }
           }
+
+          {
+            let latencySchema = getPartialSchema(gbfsVersion, 'free_bike_status/data_latency')
+            if (latencySchema) {
+              addPartialSchema.push(latencySchema)
+            }
+          }
+
           break
         case 'vehicle_status':
           if (vehicleTypes && vehicleTypes.length) {
@@ -536,9 +611,20 @@ class GBFS {
               }
             )
             if (partial) {
-              addSchema.push(partial)
+              addPartialSchema.push(partial)
             }
           }
+
+          {
+            let latencySchema = getPartialSchema(
+              gbfsVersion,
+              'vehicle_status/data_latency'
+            )
+            if (latencySchema) {
+              addPartialSchema.push(latencySchema)
+            }
+          }
+
           break
         case 'vehicle_types':
           if (freeBikeStatusHasVehicleTypeId) {
@@ -550,7 +636,18 @@ class GBFS {
             })
 
             if (partial) {
-              addSchema.push(partial)
+              addPartialSchema.push(partial)
+            }
+          }
+
+          if (hasReserveTime) {
+            let schema = getAdditionalSchema(
+              gbfsVersion,
+              'vehicle_types/default_reserve_time_required'
+            )
+
+            if (additionalSchema) {
+              additionalSchema.push(schema)
             }
           }
 
@@ -571,7 +668,7 @@ class GBFS {
               }
             )
             if (partial) {
-              addSchema.push(partial)
+              addPartialSchema.push(partial)
             }
           }
         default:
@@ -579,9 +676,16 @@ class GBFS {
       }
 
       result.push(
-        this.validationFile(f.body, gbfsVersion, f.type, required, {
-          addSchema
-        })
+        this.validationFile(
+          f.body,
+          gbfsVersion,
+          f.type,
+          required,
+          {
+            addSchema: addPartialSchema
+          },
+          { additionalSchema }
+        )
       )
     })
 

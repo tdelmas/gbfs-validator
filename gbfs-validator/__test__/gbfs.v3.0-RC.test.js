@@ -3,7 +3,7 @@ const GBFS = require('../gbfs')
 function get_errors(result) {
   let errors = []
 
-  result.files.map(f => {
+  result.files?.map(f => {
     if (f.errors) {
       errors.push({ file: f.file, errors: f.errors })
     }
@@ -143,6 +143,62 @@ describe('exaustive feed', () => {
         }),
         files: expect.any(Array)
       })
+    })
+  })
+})
+
+describe('default_reserve_time REQUIRED if reservation_price_per_min or reservation_price_flat_rate are defined', () => {
+  let gbfsFeedServer
+
+  beforeAll(async () => {
+    const { MockRequests } = require('./fixtures/v3.0-RC/exaustive')
+
+    class InvalidMockRequests extends MockRequests {
+      vehicle_types(...args) {
+        const json = super.vehicle_types(...args)
+
+        //FIXME test vehicle type
+        delete json.data.vehicle_types[0].default_reserve_time
+
+        return json
+      }
+    }
+
+    let mockRequests = new InvalidMockRequests()
+
+    gbfsFeedServer = mockRequests.build()
+
+    await gbfsFeedServer.listen()
+  })
+
+  afterAll(() => {
+    return gbfsFeedServer.close()
+  })
+
+  test('should not validate feed', async () => {
+    const url = `http://${gbfsFeedServer.server.address().address}:${
+      gbfsFeedServer.server.address().port
+    }`
+    const gbfs = new GBFS(`${url}/gbfs.json`)
+
+    expect.assertions(2)
+
+    return gbfs.validation().then(result => {
+      expect(result).toMatchObject({
+        summary: expect.objectContaining({
+          version: { detected: '3.0-RC', validated: '3.0-RC' },
+          validatorVersion: '1.0.0',
+          hasErrors: true,
+          errorsCount: 1
+        }),
+        files: expect.any(Array)
+      })
+
+      let errors = get_errors(result)
+
+      expect(errors[0].errors[0].schemaPath).toBe(
+        '#/properties/data/properties/vehicle_types/items/required'
+      )
     })
   })
 })

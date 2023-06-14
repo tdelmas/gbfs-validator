@@ -2,6 +2,7 @@ const fastify = require('fastify')
 
 const version = '3.0-RC'
 const last_updated = 1566224400
+const last_updated_fresh = Math.floor(Date.now() / 1000) - 30
 
 class MockRequests {
   entry_points() {
@@ -153,7 +154,7 @@ class MockRequests {
 
   vehicle_status() {
     return {
-      last_updated,
+      last_updated: last_updated_fresh,
       ttl: 0,
       version,
       data: {
