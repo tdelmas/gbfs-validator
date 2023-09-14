@@ -191,7 +191,14 @@ const hasStationsDetails = computed(() => {
 const vehiclesInStations = computed(() => {
   if (get(stations)) {
     return `${get(stations).reduce((acc, s) => {
-      acc += getStationStatus(s.station_id)?.num_bikes_available || 0
+      const stationStatus = getStationStatus(s.station_id)
+
+      if (stationStatus) {
+        acc +=
+          stationStatus.num_bikes_available ||
+          stationStatus.num_vehicles_available ||
+          0
+      }
 
       return acc
     }, 0)} vehicles`
@@ -236,7 +243,7 @@ const getVehicleType = function (vehicleTypeId) {
       (f) => f.file === 'vehicle_types.json'
     )
 
-    return dataFromArray(vehicleTypesFile)?.vehicle_types.find(
+    return dataFromArray(vehicleTypesFile)?.vehicle_types?.find(
       (vt) => vt.vehicle_type_id === vehicleTypeId
     )
   }
@@ -248,7 +255,7 @@ const getPricingPlan = function (pricingPlanId) {
       (f) => f.file === 'system_pricing_plans.json'
     )
 
-    return dataFromArray(pricingPlansFile)?.plans.find(
+    return dataFromArray(pricingPlansFile)?.plans?.find(
       (pp) => pp.plan_id === pricingPlanId
     )
   }
@@ -260,7 +267,7 @@ const getStationStatus = function (stationId) {
       (f) => f.file === 'station_status.json'
     )
 
-    return dataFromArray(stationStatusFile)?.stations.find(
+    return dataFromArray(stationStatusFile)?.stations?.find(
       (vt) => vt.station_id === stationId
     )
   }
@@ -421,9 +428,12 @@ function populateData() {
       pointRadiusMinPixels: 3,
       stroked: false,
       getFillColor: (info) => {
-        if (info.properties._info.num_bikes_available > 5) {
+        const num_vehicles =
+          info.properties._info.num_bikes_available ||
+          info.properties._info.num_vehicles_available
+        if (num_vehicles > 5) {
           return [6, 156, 86]
-        } else if (info.properties._info.num_bikes_available > 0) {
+        } else if (num_vehicles > 0) {
           return [255, 152, 14]
         } else {
           return [211, 33, 44]
